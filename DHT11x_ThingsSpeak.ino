@@ -36,5 +36,6 @@ void loop()
   
   delay(1000);
   ThingSpeak.writeField(myChannelNumber, 1,val, myWriteAPIKey); //Update in ThingSpeak
+  ThingSpeak.writeField(myChannelNumber, 2,calc, myWriteAPIKey);
   delay(100);
 }
