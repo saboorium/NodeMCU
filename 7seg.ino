@@ -1,3 +1,17 @@
+/*
+Nodemcu esp8266	Seven Segment Display	220 Ohm 2 Resistor 
+D2 Pin            	A   Pin	 
+D3 Pin	            B   Pin	 
+D6 Pin            	C   Pin	 
+D5 Pin            	D   Pin	 
+D4 Pin             E   Pin	 
+D1 Pin            	F   Pin	 
+D0 Pin	            G   Pin	 
+D7 Pin            	DP Pin	 
+                  	Both Common	        Terminal 1
+G, GND	 	                              Terminal 2
+*/
+
 // Common Cathode Seven Segment
  // TECHATRONIC.COM   
   void setup()   
