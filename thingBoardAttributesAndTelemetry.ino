@@ -1,11 +1,13 @@
 #include <ArduinoJson.h>
 #include <PubSubClient.h>
 #include <ESP8266WiFi.h>
+#include "DHT.h"
+// #include <ThingsBoard.h>
 
-#define WIFI_AP "xxx"
+#define WIFI_AP "realme GT NEO 3"
 #define WIFI_PASSWORD "xxx"
 
-#define TOKEN "xxx"
+#define TOKEN "xvx"
 
 #define GPIO0 D0
 #define GPIO2 D2
@@ -18,8 +20,11 @@ char thingsboardServer[] = "demo.thingsboard.io";
 WiFiClient wifiClient;
 
 PubSubClient client(wifiClient);
+//ThingsBoard tb(wifiClient);
+DHT dht;
 
 int status = WL_IDLE_STATUS;
+unsigned long lastSend;
 
 // We assume that all GPIOs are LOW
 boolean gpioState[] = {false, false};
@@ -29,6 +34,7 @@ void setup() {
   // Set output mode for all GPIO pins
   pinMode(GPIO0, OUTPUT);
   pinMode(GPIO2, OUTPUT);
+  dht.setup(D1);
   delay(10);
   InitWiFi();
   client.setServer( thingsboardServer, 1883 );
@@ -39,8 +45,48 @@ void loop() {
   if ( !client.connected() ) {
     reconnect();
   }
-
+  if ( millis() - lastSend > 1000 ) { // Update and send only after 1 seconds
+    getAndSendTemperatureAndHumidityData();
+    lastSend = millis();
+  }
+  //tb.loop();
   client.loop();
+  
+}
+
+void getAndSendTemperatureAndHumidityData()
+{
+  Serial.println("Collecting temperature data.");
+
+  // Reading temperature or humidity takes about 250 milliseconds!
+  float humidity = dht.getHumidity();
+  // Read temperature as Celsius (the default)
+  float temperature = dht.getTemperature();
+  float tempf=dht.toFahrenheit(temperature);
+  Serial.println("STATUS OF DHT11");
+  Serial.print(dht.getStatusString());
+  char data[500];
+  String payload1 = "{";
+  payload1 += "\"Humidity\":";   payload1 += humidity;    payload1 += ",";
+  payload1 += "\"Temperature*C\":";         payload1 +=temperature;          payload1 += ",";
+  payload1 += "\"Temperature*F\":";         payload1 += tempf;
+  payload1 += "}";
+  payload1.toCharArray(data, 500);
+
+  Serial.println("Sending data to ThingsBoard:");
+  Serial.print("Humidity: ");
+  Serial.print(humidity);
+  Serial.print(" %\t");
+  Serial.print("Temperature: ");
+  Serial.print(temperature);
+  Serial.print(" *C ");
+  Serial.print(tempf);
+  Serial.println("*F");
+
+  client.publish("v1/devices/me/telemetry",data);
+
+  // tb.sendTelemetryFloat("temperature", temperature);
+  // tb.sendTelemetryFloat("humidity", humidity);
 }
 
 // The callback for when a PUBLISH message is received from the server.
@@ -107,7 +153,7 @@ void set_gpio_status(int pin, boolean enabled) {
   Serial.println("now setting the pin status");
   if (pin == GPIO0_PIN) {
     // Output GPIOs state
-    digitalWrite(GPIO0, enabled ? HIGH : LOW);
+    digitalWrite(GPIO0, enabled ? LOW : HIGH);
     // Update GPIOs state
     gpioState[0] = enabled;
   } else if (pin == GPIO2_PIN) {
