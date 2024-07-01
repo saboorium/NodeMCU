@@ -2,12 +2,14 @@
 #include <PubSubClient.h>
 #include <ESP8266WiFi.h>
 #include "DHT.h"
-// #include <ThingsBoard.h>
+#include<Wire.h>
+#include <Adafruit_GFX.h>
+#include <SoftwareSerial.h>
 
 #define WIFI_AP "realme GT NEO 3"
-#define WIFI_PASSWORD "xxx"
+#define WIFI_PASSWORD "v379i2rn"
 
-#define TOKEN "xvx"
+#define TOKEN "jyde1i70xm9h8h3qok3e"
 
 #define GPIO0 D0
 #define GPIO2 D2
@@ -15,14 +17,19 @@
 #define GPIO0_PIN 3
 #define GPIO2_PIN 5
 
+const int trigPin = D5;
+const int echoPin = D6;
+
 char thingsboardServer[] = "demo.thingsboard.io";
 
 WiFiClient wifiClient;
-
+SoftwareSerial mySerial(D6,D5); // RX, TX 
+// connect yellow wire to D5 and White wire to D6
 PubSubClient client(wifiClient);
-//ThingsBoard tb(wifiClient);
 DHT dht;
 
+unsigned char data[4]={};
+float distance;
 int status = WL_IDLE_STATUS;
 unsigned long lastSend;
 
@@ -34,7 +41,10 @@ void setup() {
   // Set output mode for all GPIO pins
   pinMode(GPIO0, OUTPUT);
   pinMode(GPIO2, OUTPUT);
+    pinMode(trigPin, OUTPUT);
+  pinMode(echoPin, INPUT);
   dht.setup(D1);
+  mySerial.begin(9600); 
   delay(10);
   InitWiFi();
   client.setServer( thingsboardServer, 1883 );
@@ -45,15 +55,78 @@ void loop() {
   if ( !client.connected() ) {
     reconnect();
   }
-  if ( millis() - lastSend > 1000 ) { // Update and send only after 1 seconds
-    getAndSendTemperatureAndHumidityData();
-    lastSend = millis();
-  }
-  //tb.loop();
+  // if ( millis() - lastSend > 1000 ) { // Update and send only after 1 seconds
+  //   getAndSendTemperatureAndHumidityData();
+  //   lastSend = millis();
+  // }
+  // getDistanceData();
+  // sendDistanceData();
+  getAndSendDistanceData();
   client.loop();
   
 }
+void getAndSendDistanceData()
+{
+  const int trigPin = D5;
+const int echoPin = D6;
 
+  digitalWrite(trigPin, LOW);
+  delayMicroseconds(10);
+
+  digitalWrite(trigPin, HIGH);
+  delayMicroseconds(30);
+  digitalWrite(trigPin, LOW);
+
+  long duration = pulseIn(echoPin, HIGH);
+  long distance = duration * 0.034 / 2;
+
+  Serial.print("Distance:");
+  Serial.println(distance);
+  delay(400);
+  String payload="{";
+  payload+="\"Distance\":"; payload+=distance; payload+="}";
+  char data[500];
+  payload.toCharArray(data, 500);
+  Serial.println("Sending Data To ThingsBoard:");
+  Serial.println(distance);
+  client.publish("v1/devices/me/telemetry",data);
+}
+
+void getDistanceData()
+{
+  Serial.println("Collecting Distance Data:");
+  do{
+     for(int i=0;i<4;i++)
+     {
+       data[i]=mySerial.read();
+     }
+  }while(mySerial.read()==0xff);
+
+  mySerial.flush();
+
+  if(data[0]==0xff)
+    {
+      int sum;
+      sum=(data[0]+data[1]+data[2])&0x00FF;
+      if(sum==data[3])
+      {
+        distance=(data[1]<<8)+data[2];
+         distance=distance / 10;
+         Serial.print(distance);
+      }
+     }
+     delay(100);
+}
+void sendDistanceData()
+{
+  String payload="{";
+  payload+="\"Distance\":"; payload+=distance; payload+="}";
+  char data[500];
+  payload.toCharArray(data, 500);
+  Serial.println("Sending Data To ThingsBoard:");
+  Serial.println(distance);
+  client.publish("v1/devices/me/telemetry",data);
+}
 void getAndSendTemperatureAndHumidityData()
 {
   Serial.println("Collecting temperature data.");
@@ -84,9 +157,6 @@ void getAndSendTemperatureAndHumidityData()
   Serial.println("*F");
 
   client.publish("v1/devices/me/telemetry",data);
-
-  // tb.sendTelemetryFloat("temperature", temperature);
-  // tb.sendTelemetryFloat("humidity", humidity);
 }
 
 // The callback for when a PUBLISH message is received from the server.
