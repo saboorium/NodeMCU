@@ -43,6 +43,7 @@ void loop()
 
 
 /*
+For Arduino
 #include <Adafruit_GFX.h>
 #include <SoftwareSerial.h>
 
