@@ -7,9 +7,9 @@
 #include <SoftwareSerial.h>
 
 #define WIFI_AP "realme GT NEO 3"
-#define WIFI_PASSWORD "v379i2rn"
+#define WIFI_PASSWORD "xxx"
 
-#define TOKEN "jyde1i70xm9h8h3qok3e"
+#define TOKEN "xxx"
 
 #define GPIO0 D0
 #define GPIO2 D2
